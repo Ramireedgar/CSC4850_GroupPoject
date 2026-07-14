@@ -1,0 +1,50 @@
+=========================================================
+EUROPEAN SOCCER PREDICTION: PREPROCESSING & PCA EXPLANATION
+=========================================================
+
+This document explains each step of the data preprocessing and Principal Component Analysis (PCA) pipeline we built in `pre-process.ipynb`, why we did it, and how to interpret the results.
+
+---------------------------------------------------------
+STEP 1: TARGET VARIABLE CREATION (match_outcome)
+---------------------------------------------------------
+* What we did: We compared `home_team_goal` and `away_team_goal` to create a single label: `1` (Home Win), `2` (Home Loss), or `0` (Draw).
+* Why we did it: Supervised Machine Learning algorithms (like KNN, SVM, and Neural Networks) need a singular "Target" to predict. They cannot predict two separate numbers (home goals and away goals) simultaneously in a standard classification setup. 
+* Interpretation: When we pass `y` into our models, the models are simply trying to classify whether the home team will Win, Lose, or Draw based on the input features.
+
+---------------------------------------------------------
+STEP 2: FEATURE ENGINEERING (Aggregating Team Attributes)
+---------------------------------------------------------
+* What we did: We grouped the `Team_Attributes` table by team ID and calculated the mathematical average of all their stats (build-up play speed, chance creation, etc.). We then joined these averages for both the home team and away team into our main matches dataframe.
+* Why we did it: The original matches dataframe only had database IDs and team names. Machine learning models cannot train on text names or arbitrary IDs. By joining the team attributes, we give the models actual numeric stats (representing team strength/style) to find patterns in.
+
+---------------------------------------------------------
+STEP 3: CLEANING (Dropping IDs and Imputing Missing Values)
+---------------------------------------------------------
+* What we did: We dropped all identifying columns (like `match_id`, `team_api_id`) and filled any missing (`NaN`) values with the median of that column.
+* Why we did it: 
+  1. If we leave database IDs in the dataset, the models might falsely learn that "Match ID #500 always results in a win," which is completely useless for predicting future matches.
+  2. Models like PCA, SVM, and Neural Networks do not understand empty data (`NaN`). If there is even a single missing value, the algorithms will crash.
+
+---------------------------------------------------------
+STEP 4: STANDARDIZATION (StandardScaler)
+---------------------------------------------------------
+* What we did: We transformed all our features so that every column has a Mean of 0 and a Standard Deviation of 1.
+* Why we did it: **This is critical.** Some stats might range from 1 to 10, while others range from 0 to 100. Algorithms like K-Nearest Neighbors (KNN) calculate the physical distance between data points. If we don't scale the data, the features with larger numbers (0-100) will overpower the smaller features, completely ruining the model's accuracy. StandardScaler puts everything on a mathematically equal playing field.
+
+---------------------------------------------------------
+STEP 5: PRINCIPAL COMPONENT ANALYSIS (PCA)
+---------------------------------------------------------
+* What we did: We initialized PCA with `n_components=0.95` and applied it to our scaled data.
+* Why we did it: When you have dozens of features (home_team_passing, away_team_passing, etc.), many of them are redundant (highly correlated). PCA compresses the dataset by creating new, uncorrelated "Principal Components." By setting `0.95`, we told PCA: "Give me the minimum number of components needed to retain exactly 95% of the information/variance from the original dataset."
+
+---------------------------------------------------------
+INTERPRETING THE PCA RESULTS & PLOT
+---------------------------------------------------------
+* Text Output Interpretation: 
+  When the code printed the original number of features versus the reduced number of features, it told you exactly how much redundancy PCA removed. For example, if you started with 40 features and PCA reduced it to 22, it means 22 mathematical components are enough to hold 95% of the information from all 40 original stats. This makes your KNN, SVM, and Neural Networks run significantly faster and prevents them from "overfitting" on noise.
+
+* Plot Interpretation (Cumulative Explained Variance):
+  The graph shows how much cumulative information is retained as you add more principal components.
+  - The X-axis is the number of principal components.
+  - The Y-axis is the total variance (information) explained.
+  - Notice how the line curves aggressively upwards at the start and then flattens out. This means the first few principal components capture massive amounts of data, while the later ones barely add any value. The plot ends exactly where the Y-axis hits 0.95 (95% variance), visually proving that we don't need any more components beyond that point!
