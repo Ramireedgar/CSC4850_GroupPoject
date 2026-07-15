@@ -48,3 +48,36 @@ INTERPRETING THE PCA RESULTS & PLOT
   - The X-axis is the number of principal components.
   - The Y-axis is the total variance (information) explained.
   - Notice how the line curves aggressively upwards at the start and then flattens out. This means the first few principal components capture massive amounts of data, while the later ones barely add any value. The plot ends exactly where the Y-axis hits 0.95 (95% variance), visually proving that we don't need any more components beyond that point!
+
+---------------------------------------------------------
+CRITICAL UPDATE: TRAIN/TEST SPLIT & TEMPORAL SPLITTING
+---------------------------------------------------------
+* What we did: We updated the pipeline to sort the matches by date, and then perform a `train_test_split(test_size=0.2, shuffle=False)` before scaling and PCA.
+* Why we did it: 
+  1. Time-Based Splitting: Because sports happen over time, we want to train our model on past matches (the first 80%) to predict future matches (the last 20%). Sorting by date and setting `shuffle=False` ensures we aren't using matches from 2015 to predict matches in 2010.
+  2. Preventing Data Leakage: We fit `StandardScaler` and `PCA` ONLY on `X_train`, and then `transform` both `X_train` and `X_test`. If we fitted them on the entire dataset, the transformations would mathematically "peek" into the testing data, causing data leakage and giving unrealistically high accuracy scores that would fail in the real world.
+
+=========================================================
+MODELING PHASE: K-NEAREST NEIGHBORS (KNN)
+=========================================================
+
+---------------------------------------------------------
+STEP 1: EXPORTING PROCESSED DATA
+---------------------------------------------------------
+* What we did: At the end of the preprocessing notebook, we exported `X_train_pca`, `X_test_pca`, `y_train`, and `y_test` into CSV files.
+* Why we did it: This separates data preparation from modeling. By exporting the clean data, we don't have to re-run the entire pipeline every time we want to build or tweak a machine learning model. It saves time and prevents accidental modifications to the preprocessing logic while modeling.
+
+---------------------------------------------------------
+STEP 2: TRAINING THE KNN MODEL
+---------------------------------------------------------
+* What we did: We loaded the CSVs into a new notebook (`models/knn_model.ipynb`) and trained a `KNeighborsClassifier(n_neighbors=5)` using our training dataset.
+* Why we did it: K-Nearest Neighbors is a solid baseline classification model. It works by looking at a data point (a match), calculating the "distance" to the 5 closest matches in the historical training data, and predicting the outcome based on what happened in those 5 historical matches. If 4 out of 5 of the closest matches resulted in a Home Win, the model predicts a Home Win.
+
+---------------------------------------------------------
+STEP 3: EVALUATING THE MODEL
+---------------------------------------------------------
+* What we did: We generated predictions on the test dataset (`X_test_pca`) and compared them to the actual outcomes (`y_test`) using Accuracy, a Classification Report (Precision, Recall, F1-Score), and a Confusion Matrix.
+* Why we did it: 
+  - Accuracy: Tells us what percentage of matches the model guessed correctly overall.
+  - Classification Report: Shows if the model is biased. For example, because Home Wins are more common, the model might be really good at guessing Home Wins (high recall for class 1) but terrible at guessing Draws (low recall for class 0).
+  - Confusion Matrix: This is a heatmap grid that visually shows exactly where the model is getting confused. If the actual outcome was a Draw, but the model predicted a Home Win, the grid will show you exactly how many times that specific mistake occurred.
