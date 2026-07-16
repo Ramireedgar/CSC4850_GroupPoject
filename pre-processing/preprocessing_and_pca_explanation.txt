@@ -7,15 +7,23 @@ This document explains each step of the data preprocessing and Principal Compone
 ---------------------------------------------------------
 STEP 1: TARGET VARIABLE CREATION (match_outcome)
 ---------------------------------------------------------
-* What we did: We compared `home_team_goal` and `away_team_goal` to create a single label: `1` (Home Win), `2` (Home Loss), or `0` (Draw).
-* Why we did it: Supervised Machine Learning algorithms (like KNN, SVM, and Neural Networks) need a singular "Target" to predict. They cannot predict two separate numbers (home goals and away goals) simultaneously in a standard classification setup. 
-* Interpretation: When we pass `y` into our models, the models are simply trying to classify whether the home team will Win, Lose, or Draw based on the input features.
+* What we did: We compared goals to create a single label: `1` (Win), `2` (Loss), or `0` (Draw) from the perspective of the primary team.
+* Why we did it: Supervised Machine Learning algorithms (like KNN, SVM, and Neural Networks) need a singular "Target" to predict. They cannot predict two separate numbers (goals) simultaneously in a standard classification setup. 
+* Interpretation (What you are actually predicting): 
+  When we pass `y` into our models, the models are evaluating the matchup from the perspective of a generic "Team". Because we duplicated and symmetrized the data, the model learns to predict: "Based on these Team stats vs these Opponent stats, will the Team Win (1), Lose (2), or Draw (0)?" 
+  You are explicitly predicting the outcome for ANY team, while still providing the model with an `is_home` flag if home-field advantage is relevant.
 
 ---------------------------------------------------------
 STEP 2: FEATURE ENGINEERING (Aggregating Team Attributes)
 ---------------------------------------------------------
 * What we did: We grouped the `Team_Attributes` table by team ID and calculated the mathematical average of all their stats (build-up play speed, chance creation, etc.). We then joined these averages for both the home team and away team into our main matches dataframe.
 * Why we did it: The original matches dataframe only had database IDs and team names. Machine learning models cannot train on text names or arbitrary IDs. By joining the team attributes, we give the models actual numeric stats (representing team strength/style) to find patterns in.
+
+---------------------------------------------------------
+STEP 2.5: DATA SYMMETRIZATION (Removing Home-Field Bias)
+---------------------------------------------------------
+* What we did: We duplicated our entire dataset so that every single match appears twice: once from the perspective of the Home Team, and once from the perspective of the Away Team. We renamed all features from `home_` and `away_` to `team_` and `opponent_`. We also added an `is_home` flag (1 or 0).
+* Why we did it: If the first half of the stats *always* belongs to the home team, the model learns a baked-in bias predicting "Home Team Outcomes." By stacking the dataset with both perspectives, the model learns to predict the outcome of a match for a generic "Team" against an "Opponent," regardless of whether that team is playing at home or away.
 
 ---------------------------------------------------------
 STEP 3: CLEANING (Dropping IDs and Imputing Missing Values)
@@ -35,7 +43,7 @@ STEP 4: STANDARDIZATION (StandardScaler)
 STEP 5: PRINCIPAL COMPONENT ANALYSIS (PCA)
 ---------------------------------------------------------
 * What we did: We initialized PCA with `n_components=0.95` and applied it to our scaled data.
-* Why we did it: When you have dozens of features (home_team_passing, away_team_passing, etc.), many of them are redundant (highly correlated). PCA compresses the dataset by creating new, uncorrelated "Principal Components." By setting `0.95`, we told PCA: "Give me the minimum number of components needed to retain exactly 95% of the information/variance from the original dataset."
+* Why we did it: When you have dozens of features (team_passing, opponent_passing, etc.), many of them are redundant (highly correlated). PCA compresses the dataset by creating new, uncorrelated "Principal Components." By setting `0.95`, we told PCA: "Give me the minimum number of components needed to retain exactly 95% of the information/variance from the original dataset."
 
 ---------------------------------------------------------
 INTERPRETING THE PCA RESULTS & PLOT
@@ -71,7 +79,7 @@ STEP 1: EXPORTING PROCESSED DATA
 STEP 2: TRAINING THE KNN MODEL
 ---------------------------------------------------------
 * What we did: We loaded the CSVs into a new notebook (`models/knn_model.ipynb`) and trained a `KNeighborsClassifier(n_neighbors=5)` using our training dataset.
-* Why we did it: K-Nearest Neighbors is a solid baseline classification model. It works by looking at a data point (a match), calculating the "distance" to the 5 closest matches in the historical training data, and predicting the outcome based on what happened in those 5 historical matches. If 4 out of 5 of the closest matches resulted in a Home Win, the model predicts a Home Win.
+* Why we did it: K-Nearest Neighbors is a solid baseline classification model. It works by looking at a data point (a match), calculating the "distance" to the 5 closest matches in the historical training data, and predicting the outcome based on what happened in those 5 historical matches. If 4 out of 5 of the closest matches resulted in a Win, the model predicts a Win.
 
 ---------------------------------------------------------
 STEP 3: EVALUATING THE MODEL
@@ -79,5 +87,7 @@ STEP 3: EVALUATING THE MODEL
 * What we did: We generated predictions on the test dataset (`X_test_pca`) and compared them to the actual outcomes (`y_test`) using Accuracy, a Classification Report (Precision, Recall, F1-Score), and a Confusion Matrix.
 * Why we did it: 
   - Accuracy: Tells us what percentage of matches the model guessed correctly overall.
-  - Classification Report: Shows if the model is biased. For example, because Home Wins are more common, the model might be really good at guessing Home Wins (high recall for class 1) but terrible at guessing Draws (low recall for class 0).
-  - Confusion Matrix: This is a heatmap grid that visually shows exactly where the model is getting confused. If the actual outcome was a Draw, but the model predicted a Home Win, the grid will show you exactly how many times that specific mistake occurred.
+  - Classification Report: Shows if the model is biased. For example, because Wins are more common, the model might be really good at guessing Wins (high recall for class 1) but terrible at guessing Draws (low recall for class 0).
+  - Confusion Matrix: This is a heatmap grid that visually shows exactly where the model is getting confused. If the actual outcome was a Draw, but the model predicted a Win, the grid will show you exactly how many times that specific mistake occurred.
+
+
