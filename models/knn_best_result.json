@@ -1,0 +1,9 @@
+{
+  "model": "KNN",
+  "best_params": {
+    "k": 21,
+    "weights": "uniform"
+  },
+  "test_accuracy": 0.4634,
+  "baseline_accuracy": 0.4295
+}
