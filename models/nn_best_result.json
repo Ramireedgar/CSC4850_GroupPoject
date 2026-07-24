@@ -1,0 +1,12 @@
+{
+  "model": "Neural Network (MLP)",
+  "best_params": {
+    "hidden_layer_sizes": [
+      100
+    ],
+    "max_iter": 500,
+    "early_stopping": true
+  },
+  "cv_accuracy": 0.4918,
+  "test_accuracy": 0.4908
+}

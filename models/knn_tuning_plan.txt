@@ -1,0 +1,35 @@
+# Hyperparameter Tuning for KNN Model
+
+We will implement GridSearchCV to automatically test dozens of configurations for our K-Nearest Neighbors model to find the mathematical optimum for predicting match outcomes.
+
+## Proposed Changes
+
+### [Models]
+
+We will modify the existing `knn_model.ipynb` to include a Hyperparameter Tuning section.
+
+#### [MODIFY] knn_model.ipynb
+- **Import GridSearchCV**: Add `from sklearn.model_selection import GridSearchCV` to the imports cell.
+- **Define Parameter Grid**: Create a dictionary of parameters to test:
+  - `n_neighbors`: [3, 5, 7, 9, 11, 15, 21, 31, 51]
+  - `weights`: ['uniform', 'distance']
+  - `metric`: ['euclidean', 'manhattan', 'minkowski']
+- **Run Grid Search**: Initialize `GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')` and `.fit()` it on `X_train` and `y_train`.
+- **Extract Best Model**: Print out `grid_search.best_params_` to see exactly what the best settings are.
+- **Evaluate Best Model**: Use the best estimator found to generate a new Classification Report and Confusion Matrix on the test data.
+
+## Open Questions
+Do you want me to overwrite the existing Baseline model cells in `knn_model.ipynb` with this new tuned model, or would you prefer I append this as a *new* section at the bottom of the notebook so you can compare the Baseline vs. Tuned models side-by-side?
+
+
+
+
+
+=========================================now what we predict===================
+Yes, exactly!
+
+Because we duplicated the dataset and created a "mirror image" of every single match (i.e., we fed it data from Team A's perspective, and then fed it the exact same match stats from Team B's perspective), the model is no longer anchored to a specific "Home" or "Away" position.
+
+It is now learning strictly from the perspective of a generic "Team" playing against an "Opponent". The fact that a team is playing at home is now just a single boolean feature (is_home = 1 or 0) rather than the entire structure of the dataset.
+
+This means it is predicting general Win / Loss / Draw!

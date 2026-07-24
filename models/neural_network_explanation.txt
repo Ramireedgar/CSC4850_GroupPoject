@@ -1,0 +1,23 @@
+Neural Network Model Explanation & Statistics
+=============================================
+
+1. What the Neural Network Does:
+The neural network used in this project is a Multi-Layer Perceptron (MLP) Classifier.
+- Structure: It uses 1 hidden layer with 100 neurons (a common starting point for structured tabular data).
+- Learning process: During training, it iteratively adjusts internal weights using backpropagation to minimize classification error.
+- Early Stopping: To avoid overfitting on the training data, the model stops training early if the validation accuracy does not improve over multiple consecutive epochs.
+
+2. What the Statistics Mean:
+- Test Accuracy: This represents the proportion of correct predictions out of all predictions made on the unseen test dataset. An accuracy of 1.0 would mean 100% correct, while lower scores indicate more mistakes.
+- Cross-Validation (CV) Accuracy: This is the average accuracy over 5 separate folds of the training data. It gives us a reliable estimate of how well the model generalizes before we ever touch the test data.
+- Confusion Matrix: A matrix showing true vs. predicted classes.
+  - The diagonal elements show the number of correctly classified instances for each class.
+  - The off-diagonal elements show the instances where the model confused one class for another.
+
+3. Model Comparison:
+We can now compare three distinct machine learning approaches:
+- KNN (K-Nearest Neighbors): A distance-based algorithm that classifies points based on the most common class among their nearest neighbors.
+- SVM (Support Vector Machine): A model that attempts to find a hyperplane (or non-linear boundary using kernels like RBF) that maximally separates different classes.
+- Neural Network (MLP): A more complex model that learns hierarchical non-linear feature representations, which can sometimes capture subtle patterns that SVM and KNN might miss.
+
+By running the comparison script (`compare_models.py`), a `model_comparison.png` bar chart is generated showing the final Test Accuracy for each of the three models, indicating which model generalized best to the testing data.
