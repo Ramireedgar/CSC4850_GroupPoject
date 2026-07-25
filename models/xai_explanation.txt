@@ -1,0 +1,48 @@
+=========================================================
+EUROPEAN SOCCER PREDICTION: EXPLAINABLE AI (XAI) WITH SHAP
+=========================================================
+
+This document explains the Explainable AI (XAI) pipeline we built in `train_xai_model.py`, why we chose this specific approach, and how to interpret the resulting SHAP plots.
+
+---------------------------------------------------------
+WHY WE COULD NOT USE THE ORIGINAL PCA MODELS
+---------------------------------------------------------
+The original predictive models (KNN, SVM, Neural Network) were trained on PCA-reduced data. While PCA is fantastic for improving model speed and preventing overfitting by removing redundant information, it destroys feature interpretability. 
+
+PCA combines the original 17 soccer statistics into abstract mathematical features called "Principal Components." If we asked an Explainable AI tool "Why did the model predict a Win?", it would answer: "Because of Component 1." But Component 1 is just a mathematical equation representing a mix of passing, crossing, pressure, etc. This is useless for human understanding.
+
+---------------------------------------------------------
+OUR SOLUTION: A PARALLEL XAI MODEL
+---------------------------------------------------------
+To achieve true explainability, we implemented the following solution:
+1. We exported the original, un-reduced features from the pre-processing pipeline (after scaling but BEFORE PCA).
+2. We trained a Random Forest Classifier on these original features. Random Forests are powerful tree-based models that excel on tabular data and integrate seamlessly with SHAP's optimized `TreeExplainer`.
+3. The Random Forest achieved competitive accuracy while maintaining 100% feature interpretability.
+
+---------------------------------------------------------
+HOW TO INTERPRET THE SHAP PLOTS
+---------------------------------------------------------
+
+SHAP (SHapley Additive exPlanations) is a game-theoretic approach that explains the output of any machine learning model by assigning each feature an importance value for a particular prediction.
+
+1. THE GLOBAL SUMMARY PLOT (`shap_summary_plot.png`)
+---------------------------------------------------
+This plot provides a "bird's-eye view" of what drives the model's predictions overall (specifically looking at the probability of predicting a Win).
+* Y-axis: Lists the features in order of global importance. The feature at the top is the most important across all matches.
+* X-axis: Shows the SHAP value. A positive SHAP value pushes the model towards predicting a Win. A negative SHAP value pushes the model away from predicting a Win (e.g., towards a Loss or Draw).
+* Color: Represents the actual value of the feature (Red = High value, Blue = Low value).
+
+Example Interpretation: 
+If the top feature is "team_chanceCreationShooting" and you see a cluster of RED dots on the POSITIVE (right) side of the x-axis, it means: "When a team has a HIGH chance creation rating, it strongly INCREASES the model's probability of predicting they will WIN."
+
+2. THE LOCAL WATERFALL PLOT (`shap_local_match.png`)
+---------------------------------------------------
+This plot explains a SINGLE specific match (in our case, the first match in the test sample). It shows exactly how the model arrived at its prediction for that one game.
+* E[f(x)] (Bottom): This is the "Base Value" — the average prediction probability across all matches before looking at any specific stats.
+* f(x) (Top): This is the final prediction output for this specific match.
+* The Bars: Each bar shows how a specific feature pushed the prediction away from the Base Value towards the Final Output. Red bars pushed the prediction higher (more likely to win), while blue bars pushed the prediction lower (less likely to win).
+
+Example Interpretation:
+You might see that the model started at a base value of 0.35. Then, "team_passing = 65" pushed the prediction up by +0.10 (Red bar). But "opponent_pressure = 70" pushed it down by -0.05 (Blue bar). The cascading effect of all features leads to the final prediction at the top.
+
+=========================================================
