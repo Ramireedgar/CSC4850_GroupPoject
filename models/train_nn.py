@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, precision_score, recall_score, f1_score
 import json
 import os
 
@@ -50,6 +50,11 @@ os.makedirs(results_dir, exist_ok=True)
 plt.savefig(os.path.join(results_dir, 'nn_confusion_matrix.png'))
 plt.close()
 
+# Calculate additional metrics
+precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
+recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
+f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+
 # Save results to json
 result = {
     "model": "Neural Network (MLP)",
@@ -59,7 +64,10 @@ result = {
         "early_stopping": True
     },
     "cv_accuracy": round(cv_accuracy, 4),
-    "test_accuracy": round(test_accuracy, 4)
+    "test_accuracy": round(test_accuracy, 4),
+    "precision": round(precision, 4),
+    "recall": round(recall, 4),
+    "f1_score": round(f1, 4)
 }
 
 with open(os.path.join(script_dir, 'nn_best_result.json'), 'w') as f:
