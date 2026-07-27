@@ -64,7 +64,7 @@ ax.set_title('Model Performance Comparison (Weighted Average)')
 ax.set_xticks(x)
 ax.set_xticklabels(models)
 ax.set_ylim(0, 1.0)
-ax.legend(loc='lower right')
+ax.legend(loc='upper right')
 
 def autolabel(rects):
     """Attach a text label above each bar in *rects*, displaying its height."""
