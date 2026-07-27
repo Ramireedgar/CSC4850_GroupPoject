@@ -6,12 +6,16 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import json
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+preproc_dir = os.path.join(script_dir, '..', 'pre-processing')
 
 # Load PCA-reduced data from the pre-processing folder
-X_train = pd.read_csv('../pre-processing/X_train_pca.csv')
-X_test  = pd.read_csv('../pre-processing/X_test_pca.csv')
-y_train = pd.read_csv('../pre-processing/y_train.csv').values.ravel()
-y_test  = pd.read_csv('../pre-processing/y_test.csv').values.ravel()
+X_train = pd.read_csv(os.path.join(preproc_dir, 'X_train_pca.csv'))
+X_test  = pd.read_csv(os.path.join(preproc_dir, 'X_test_pca.csv'))
+y_train = pd.read_csv(os.path.join(preproc_dir, 'y_train.csv')).values.ravel()
+y_test  = pd.read_csv(os.path.join(preproc_dir, 'y_test.csv')).values.ravel()
 
 print('Training Features Shape:', X_train.shape)
 print('Testing Features Shape: ', X_test.shape)
@@ -41,7 +45,9 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
 plt.title('Neural Network Confusion Matrix')
 plt.xlabel('Predicted')
 plt.ylabel('Actual')
-plt.savefig('nn_confusion_matrix.png')
+results_dir = os.path.join(script_dir, 'results')
+os.makedirs(results_dir, exist_ok=True)
+plt.savefig(os.path.join(results_dir, 'nn_confusion_matrix.png'))
 plt.close()
 
 # Save results to json
@@ -56,7 +62,7 @@ result = {
     "test_accuracy": round(test_accuracy, 4)
 }
 
-with open('nn_best_result.json', 'w') as f:
+with open(os.path.join(script_dir, 'nn_best_result.json'), 'w') as f:
     json.dump(result, f, indent=2)
 
 print("Finished training Neural Network. Results saved to nn_best_result.json.")

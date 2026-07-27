@@ -30,7 +30,7 @@ result = {
     "model": "Random Forest (XAI Base)",
     "test_accuracy": round(acc, 4)
 }
-with open('rf_xai_result.json', 'w') as f:
+with open(os.path.join(script_dir, 'rf_xai_result.json'), 'w') as f:
     json.dump(result, f, indent=2)
 
 print("\nGenerating SHAP Explanations...")
@@ -50,14 +50,16 @@ shap_values_win = shap_values[:, :, win_index]
 print("Saving Global Summary Plot (Beeswarm)...")
 plt.figure()
 shap.summary_plot(shap_values_win, show=False)
-plt.savefig('shap_summary_plot.png', bbox_inches='tight')
+results_dir = os.path.join(script_dir, 'results')
+os.makedirs(results_dir, exist_ok=True)
+plt.savefig(os.path.join(results_dir, 'shap_summary_plot.png'), bbox_inches='tight')
 plt.close()
 
 # 2. Local Waterfall Plot for a single match (First instance in our sample)
 print("Saving Local Match Explanation (Waterfall Plot)...")
 plt.figure(figsize=(10, 6))
 shap.waterfall_plot(shap_values_win[0], show=False)
-plt.savefig('shap_local_match.png', bbox_inches='tight')
+plt.savefig(os.path.join(results_dir, 'shap_local_match.png'), bbox_inches='tight')
 plt.close()
 
 print("All XAI tasks completed successfully!")

@@ -1,8 +1,12 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-def load_json(filepath):
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+def load_json(filename):
+    filepath = os.path.join(script_dir, filename)
     try:
         with open(filepath, 'r') as f:
             return json.load(f)
@@ -45,7 +49,9 @@ for bar in bars:
     yval = bar.get_height()
     plt.text(bar.get_x() + bar.get_width()/2, yval + 0.01, f"{yval:.4f}", ha='center', va='bottom')
 
-plt.savefig('model_comparison.png')
+results_dir = os.path.join(script_dir, 'results')
+os.makedirs(results_dir, exist_ok=True)
+plt.savefig(os.path.join(results_dir, 'model_comparison.png'))
 plt.close()
 
-print("Comparison plot saved to model_comparison.png.")
+print(f"Comparison plot saved to {os.path.join('results', 'model_comparison.png')}.")
