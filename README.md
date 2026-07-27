@@ -5,8 +5,8 @@ This project contains a machine learning pipeline to predict soccer match outcom
 
 ## Project Structure
 - `pre-processing/`: Contains scripts and notebooks for extracting data from an SQLite database (`database.sqlite`), cleaning it, handling missing values, standardizing features, and performing Principal Component Analysis (PCA).
-- `models/`: Contains the implementation of various machine learning models including K-Nearest Neighbors (KNN), Support Vector Machine (SVM), Neural Network, and Random Forest. This directory also includes generated plots, results (JSON formats), and SHAP explanations.
-
+- `models/`: Contains the implementation of various machine learning models including K-Nearest Neighbors (KNN), Support Vector Machine (SVM), and Neural Network. This directory also includes generated plots, results (JSON formats), and SHAP explanations.
+- `models/results/`: Contains the generated plots and results of the models.
 ## Installation
 To run this project, you need Python installed. Install the required dependencies using:
 
