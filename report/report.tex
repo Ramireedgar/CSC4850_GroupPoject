@@ -1,0 +1,242 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  frame=single,
+  language=Python,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Predicting European Soccer Match Outcomes Using Machine Learning:
+A Comparative Study of KNN, SVM, and Neural Networks}
+
+\author{
+  \IEEEauthorblockN{Edgar Ramirez Aburto}
+  \IEEEauthorblockA{\textit{Dept. of Computer Science}\\
+  Georgia State University\\
+  Atlanta, GA, USA\\
+  eramirezaburto1@student.gsu.edu}
+  \and
+  \IEEEauthorblockN{Maliyah Fleming}
+  \IEEEauthorblockA{\textit{Dept. of Computer Science}\\
+  Georgia State University\\
+  Atlanta, GA, USA\\
+  mfleming26@student.gsu.edu}
+  \and
+  \IEEEauthorblockN{Rida Hameed Syeda}
+  \IEEEauthorblockA{\textit{Dept. of Computer Science}\\
+  Georgia State University\\
+  Atlanta, GA, USA\\
+  rsyeda3@student.gsu.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+This paper presents a machine learning pipeline that predicts European soccer match outcomes---home win, home loss, or draw---using historical team statistics from the Kaggle European Soccer Database. We apply feature engineering, PCA dimensionality reduction, and three classifiers: K-Nearest Neighbors (KNN), Support Vector Machine (SVM), and a Neural Network (NN, in progress). Our tuned KNN ($k=21$, uniform) achieves 46.36\% test accuracy versus a 43.06\% baseline. The best SVM (RBF kernel, $C=1$, $\gamma=\text{auto}$) achieves 49.08\%, currently the strongest result.
+\end{abstract}
+
+\begin{IEEEkeywords}
+soccer prediction, machine learning, KNN, SVM, neural network, PCA, classification
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction and Goals}
+
+Predicting soccer match outcomes is a three-class classification problem (home win, draw, home loss) complicated by low scores, tactical variability, and in-game randomness. Our goal is to build and compare multiple ML classifiers on the Kaggle European Soccer Database \cite{kaggle_soccer} to determine which approach best captures the signal in historical team statistics. We evaluate all models using accuracy, precision, recall, and F1-score, and plan to apply SHAP for interpretability in the final submission.
+
+% ─────────────────────────────────────────────────────────────
+\section{Dataset and Preprocessing}
+
+We use the \textit{European Soccer Database} \cite{kaggle_soccer}, containing over 25,000 matches from 11 European leagues (2008--2016). Match features are constructed by joining each match with the nearest prior team attribute snapshot. After dropping missing values, the dataset contains \textbf{51,958 samples} split 80/20 into training (41,566) and test (10,392) sets. The training set contains 15,518 home wins, 15,517 home losses, and 10,531 draws ($\approx$25\% draws).
+
+For each match we construct 18 features: 6 home team attributes (overall rating, build-up speed, build-up passing, chance creation shooting, defence aggression, defence width), the same 6 for the away team, and 6 element-wise difference features. The target is encoded as 0 (draw), 1 (home win), or 2 (home loss).
+
+The snippet below shows the core feature construction and PCA pipeline:
+
+\begin{lstlisting}
+# Merge match with closest team attributes
+df = matches.merge(home_attrs, on='home_team_id')
+df = df.merge(away_attrs, on='away_team_id')
+
+# Difference features
+for col in attr_cols:
+    df[f'diff_{col}'] = df[f'home_{col}'] - df[f'away_{col}']
+
+# Encode target
+df['result'] = df.apply(lambda r:
+    1 if r.home_goals > r.away_goals else
+    2 if r.home_goals < r.away_goals else 0, axis=1)
+
+# Scale + PCA (fit on train only)
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s  = scaler.transform(X_test)
+pca = PCA(n_components=15)
+X_train_pca = pca.fit_transform(X_train_s)
+X_test_pca  = pca.transform(X_test_s)
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────
+\section{Methods and Intermediate Results}
+
+\subsection{K-Nearest Neighbors}
+We searched $k \in \{3,5,7,9,11,15,21\}$ with \texttt{uniform}/\texttt{distance} weighting using 5-fold stratified CV. Uniform weighting outperformed distance at every $k$; CV accuracy peaked at 0.4723 for $k=21$ (Fig.~\ref{fig:knn_tuning}). Test accuracy: \textbf{46.36\%} vs.\ 43.06\% baseline. The confusion matrix (Fig.~\ref{fig:knn_cm}) and Table~\ref{tab:knn_report} show the model handles wins/losses well (F1 $\approx$ 0.53) but struggles on draws (F1 = 0.15).
+
+\begin{lstlisting}
+cv = StratifiedKFold(n_splits=5, shuffle=False)
+for k in [3, 5, 7, 9, 11, 15, 21]:
+    knn = KNeighborsClassifier(n_neighbors=k,
+                               weights='uniform')
+    scores = cross_val_score(knn, X_train, y_train,
+                             cv=cv, scoring='accuracy')
+    print(f'k={k}: {scores.mean():.4f}')
+\end{lstlisting}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\columnwidth]{pictures/knn_k_tuning.png}
+  \caption{KNN CV accuracy vs.\ $k$.}
+  \label{fig:knn_tuning}
+\end{figure}
+
+\begin{table}[h]
+\caption{KNN Classification Report ($k=21$, uniform)}
+\label{tab:knn_report}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Class} & \textbf{Prec.} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+\midrule
+Draw (0)     & 0.25 & 0.11 & 0.15 & 2,661 \\
+Win (1)      & 0.49 & 0.60 & 0.54 & 3,865 \\
+Loss (2)     & 0.49 & 0.57 & 0.53 & 3,866 \\
+\midrule
+Accuracy     & \multicolumn{3}{c}{0.46} & 10,392 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\columnwidth]{pictures/knn_confusion_matrix.png}
+  \caption{KNN confusion matrix ($k=21$, uniform).}
+  \label{fig:knn_cm}
+\end{figure}
+
+\subsection{Support Vector Machine}
+We evaluated Linear (\texttt{LinearSVC}, $C \in \{0.01,0.1,1,10\}$) and RBF kernels ($C \in \{0.1,1,10\}$, $\gamma \in \{\text{scale},\text{auto}\}$) with 3-fold \texttt{GridSearchCV}. A second \texttt{StandardScaler} is applied to the PCA output before fitting. The RBF kernel with $C=1$, $\gamma=\text{auto}$ won: CV 49.92\%, \textbf{test 49.08\%}.
+
+\begin{lstlisting}
+pca_scaler = StandardScaler()
+X_train_s = pca_scaler.fit_transform(X_train_pca)
+X_test_s  = pca_scaler.transform(X_test_pca)
+
+rbf_gs = GridSearchCV(
+    SVC(kernel='rbf', random_state=42),
+    param_grid={'C': [0.1,1,10],
+                'gamma': ['scale','auto']},
+    cv=StratifiedKFold(n_splits=3),
+    scoring='accuracy', n_jobs=-1)
+rbf_gs.fit(X_train_s, y_train)
+\end{lstlisting}
+
+Figures~\ref{fig:svm_kernels} and~\ref{fig:svm_cm} show the kernel comparison and SVM confusion matrix.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.9\columnwidth]{pictures/svm_kernel_comparison.png}
+  \caption{SVM test accuracy: Linear vs.\ RBF.}
+  \label{fig:svm_kernels}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\columnwidth]{pictures/svm_confusion_matrix.png}
+  \caption{SVM confusion matrix (RBF, $C=1$, $\gamma=\text{auto}$).}
+  \label{fig:svm_cm}
+\end{figure}
+
+\subsection{Model Comparison So Far}
+
+\begin{table}[h]
+\caption{Model Comparison — Test Accuracy}
+\label{tab:model_comparison}
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Model} & \textbf{Test Accuracy} \\
+\midrule
+KNN Baseline ($k=5$, uniform) & 43.06\% \\
+KNN Best ($k=21$, uniform)    & 46.36\% \\
+SVM Best (RBF, $C=1$, $\gamma=\text{auto}$) & \textbf{49.08\%} \\
+Neural Network                & In progress \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.9\columnwidth]{pictures/knn_vs_svm.png}
+  \caption{Test accuracy: tuned KNN vs.\ best SVM.}
+  \label{fig:knn_vs_svm}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────
+\section{Discussion}
+
+SVM (49.08\%) outperforms KNN (46.36\%), suggesting nonlinear structure in the data that the RBF kernel exploits. Both models struggle on draws (F1 = 0.15) due to class imbalance and inherent unpredictability. Overall accuracy is modest because our features are long-run averages that omit recent form and injuries. The neural network may capture additional nonlinear boundaries, though a large jump is not expected given these data constraints.
+
+% ─────────────────────────────────────────────────────────────
+\section{Remaining Plan}
+
+\begin{table}[t]
+\caption{Project Schedule — Remaining Work}
+\label{tab:plan}
+\centering
+\begin{tabular}{p{1.8cm}p{5.5cm}}
+\toprule
+\textbf{Date} & \textbf{Task} \\
+\midrule
+July 17--19   & Design and train feedforward Neural Network; tune hidden layers, activation, dropout \\
+July 20--21   & Evaluate NN on test set; compare all three models \\
+July 22--23   & Apply SHAP to best model for feature interpretation \\
+July 24--25   & Write final report; compile results, figures, and analysis \\
+July 26       & Final review and submission \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\begin{thebibliography}{00}
+
+\bibitem{kaggle_soccer}
+H. Mathien, ``European Soccer Database,'' Kaggle, 2016. [Online]. Available: \url{https://www.kaggle.com/datasets/hugomathien/soccer}
+
+\bibitem{tax2015}
+N. Tax and Y. Joustra, ``Predicting the Dutch Football Competition Using Public Data: A Machine Learning Approach,'' \textit{Transactions on Knowledge and Data Engineering}, vol. 10, no. 10, pp. 1--13, 2015.
+
+\bibitem{scikit}
+F. Pedregosa et al., ``Scikit-learn: Machine Learning in Python,'' \textit{Journal of Machine Learning Research}, vol. 12, pp. 2825--2830, 2011.
+
+\end{thebibliography}
+
+\end{document}

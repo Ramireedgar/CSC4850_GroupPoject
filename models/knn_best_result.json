@@ -4,9 +4,6 @@
     "k": 21,
     "weights": "uniform"
   },
-  "test_accuracy": 0.4634,
-  "baseline_accuracy": 0.4295,
-  "precision": 0.4287935140475242,
-  "recall": 0.4634334103156274,
-  "f1_score": 0.4359774122727468
+  "test_accuracy": 0.4636,
+  "baseline_accuracy": 0.4306
 }
